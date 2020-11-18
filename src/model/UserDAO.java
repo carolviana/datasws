@@ -1,4 +1,4 @@
-package com.example.sws;
+package model;
 
 import java.io.StringReader;
 import java.util.Iterator;
@@ -29,24 +29,21 @@ import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.http.HTTPRepository;
 
-public class ArticleDAO {
-
+public class UserDAO {
 	private static Repository repository = new HTTPRepository("http://localhost:7200/repositories/ArtifactAnalysis");
-	private static String uriBase = "https://localhost:8090/dataSWS/articles/";
+	private static String uriBase = "https://localhost:8090/dataSWS/users/";
 	
-	public static void initializeArticleStatus() {
+	public static String getUsersUri() {
+		return uriBase;
+	}
+	
+	public static void initializeUsersNameRole() {
 		String statusString = 
 	            "{\n" + 
-	            "	  	\"status\": [\n" + 
-	            "	  		{\"label\": \"submitted\", \"description\": \"The article was submitted to a conference\"},\n" + 
-	            "	  		{\"label\": \"waitingReviewers\", \"description\": \"The article is waiting reviewers\"},\n" + 
-	            "	  		{\"label\": \"inReview\", \"description\": \"The article is in evaluation mode\"},\n" + 
-	            "	  		{\"label\": \"reviewed\", \"description\": \"Review completed\"},\n" + 
-	            "	  		{\"label\": \"accepted\", \"description\": \"Article accepted\"},\n" + 
-	            "	  		{\"label\": \"acceptedWaitingLastVersion\", \"description\": \"Article accepted and waiting last version\"},\n" + 
-	            "	  		{\"label\": \"withoutLastVersion\", \"description\": \"Article without last version\"},\n" + 
-	            "	  		{\"label\": \"rejected\", \"description\": \"Article rejected\"},\n" + 
-	            "	  		{\"label\": \"withdrawn\", \"description\": \"Article withdrawn\"}\n" + 
+	            "	  	\"nameRoles\": [\n" + 
+	            "	  		{\"label\": \"author\", \"description\": \"Article's author.\"},\n" + 
+	            "	  		{\"label\": \"reviewer\", \"description\": \"Article's reviewer.\"},\n" + 
+	            "	  		{\"label\": \"pcchair\", \"description\": \"Conference organizer.\"}\n" + 
 	            "	  	]\n" + 
 	            "	  }";
 		JsonReader reader = Json.createReader(new StringReader(statusString));
@@ -57,15 +54,16 @@ public class ArticleDAO {
 		ModelBuilder builder = new ModelBuilder();
 		ValueFactory factory = SimpleValueFactory.getInstance();
 		
-        JsonArray status = dataObject.getJsonArray("status");
+        JsonArray roles = dataObject.getJsonArray("nameRoles");
         
         try (RepositoryConnection conn = repository.getConnection()) {
-        	for (int i = 0; i < status.size(); i++) {
+        	for (int i = 0; i < roles.size(); i++) {
         		builder.setNamespace("schema", "http://schema.org/").setNamespace(RDFS.NS).setNamespace(RDF.NS);
-        		builder.subject(uriBase + "status/" + status.getJsonObject(i).getString("label"))
+        		builder.subject(uriBase + "roles/" + roles.getJsonObject(i).getString("label"))
         			   .add(RDF.TYPE, "schema:Property")
-					   .add(RDFS.LABEL, factory.createIRI(uriBase + status.getJsonObject(i).getString("label")))
-					   .add("schema:description", status.getJsonObject(i).getString("description"));
+					   .add(RDFS.LABEL, factory.createIRI(uriBase + roles.getJsonObject(i).getString("label")))
+					   .add("schema:description", roles.getJsonObject(i).getString("description"))
+        			   .add("schema:roleName", factory.createIRI(uriBase + roles.getJsonObject(i).getString("label")));
         		
         		model = builder.defaultGraph().build();
         		conn.add(model);
@@ -75,7 +73,7 @@ public class ArticleDAO {
 		}
 	}
 	
-	public static String getArticleStatus() {
+	public static String getUsersRoles() {
 		StringBuilder resultString = new StringBuilder();
 		
 		try (RepositoryConnection conn = repository.getConnection()) {
@@ -97,15 +95,14 @@ public class ArticleDAO {
 		return resultString.toString();
 	}
 	
-
-	public static String getArticles() {
+	public static String getUsers() {
 		StringBuilder resultString = new StringBuilder();
 						
 		try (RepositoryConnection conn = repository.getConnection()) {
 							
 			String queryString = "PREFIX schema: <http://schema.org/>\n"+
 	  						 "select * where {\n"+
-							 "?s a schema:Article .\n"+
+							 "?s a schema:Person .\n"+
 							 "}"; 
 			TupleQuery query = conn.prepareTupleQuery(queryString);
 			TupleQueryResult result = query.evaluate();
@@ -120,7 +117,7 @@ public class ArticleDAO {
 		return resultString.toString();
 	}
 	
-	public static String getArticleById(int id) {
+	public static String getUserById(int id) {
 		StringBuilder resultString = new StringBuilder();
 				
 		try (RepositoryConnection conn = repository.getConnection()) {
@@ -136,39 +133,39 @@ public class ArticleDAO {
 		return resultString.toString();
 	}
 
-	public static String createArticle(JsonObject article) {
+	public static String createUser(JsonObject user) {
 		String response = null;
+
 		Model model = new LinkedHashModel();
 		ModelBuilder builder = new ModelBuilder();
 		ValueFactory factory = SimpleValueFactory.getInstance();
 		
 		builder.setNamespace("schema", "http://schema.org/").setNamespace(RDF.NS).setNamespace(FOAF.NS);
-		builder.subject(uriBase + article.getInt("id"))
-			   .add(RDF.TYPE, "schema:Article")
-			   .add("schema:title", article.getString("title"))
-			   .add("schema:accountablePerson", factory.createIRI(article.getString("accountablePerson")))
-			   .add("schema:creativeWorkStatus", article.getString("creativeWorkStatus"));//TODO: gerar automatico
-		
-		JsonArray authors = article.getJsonArray("authors");
-		for (int i = 0; i < authors.size(); i++) {
-			builder.add("schema:author", factory.createIRI(authors.getString(i)));
-		}
-			   	
+		builder.subject(uriBase + user.getInt("id"))
+			   .add(RDF.TYPE, "schema:Person")
+			   .add(RDF.TYPE, FOAF.PERSON)
+			   .add("schema:name", user.getString("name"))
+			   .add(FOAF.NAME, user.getString("name"))
+			   .add("schema:email", user.getString("email"))
+			   .add(FOAF.MBOX, user.getString("email"))
+			   .add("schema:roleName", factory.createIRI(user.getString("roleName")));
+	
 		model = builder.defaultGraph().build();
 		
 		try (RepositoryConnection conn = repository.getConnection()) {
 			conn.add(model);
-			response = uriBase + article.getInt("id");
+			response = uriBase + user.getInt("id");
 		} finally {
 			repository.shutDown();
 		}
 		return response;
 	}
 
-	public static boolean deleteArticleGraph(String id) {
+	public static boolean deleteUserGraph(String id) {
 		boolean flag = false;
 		try (RepositoryConnection conn = repository.getConnection()) {
 			String queryString = "DESCRIBE <" + uriBase + id + "> ?s ?p ?o";
+			System.out.println(queryString);
 			GraphQueryResult graphResult = conn.prepareGraphQuery(queryString).evaluate();
 			Model resultModel = QueryResults.asModel(graphResult);
 			for (Statement statement: resultModel) {
@@ -181,91 +178,52 @@ public class ArticleDAO {
 		return flag;
 	}
 
-	public static void updateArticleGraph(String id, JsonObject json) {
+	public static void updateUserGraph(String id, JsonObject json) {
+		
 		try (RepositoryConnection conn = repository.getConnection()) {
 			ValueFactory factory = SimpleValueFactory.getInstance();
 			IRI subject = factory.createIRI(uriBase+id);
 			for(Iterator<Entry<String, JsonValue>> iterator = json.entrySet().iterator(); iterator.hasNext();) {
-				String key = iterator.next().getKey();				
-				/*
+				String key = iterator.next().getKey();
 				String value = json.getString(key);
-				Literal object = factory.createLiteral(value);
-				IRI schemaNS;
-				*/
+				
 				switch (key.toString()) {
-					case "title":{
-						Literal object = factory.createLiteral(json.getString("title"));
-						IRI schemaNS = factory.createIRI("http://schema.org/title");
+					case "name":{
+						Literal object = factory.createLiteral(value);
+						
+						conn.remove(subject, RDFS.LABEL, null);
+						conn.add(subject, RDFS.LABEL, object);
+						
+						IRI schemaNS = factory.createIRI("http://schema.org/name");
+						conn.remove(subject, schemaNS, null);
+						conn.add(subject, schemaNS, object);
+						
+						conn.remove(subject, FOAF.NAME, null);
+						conn.add(subject, FOAF.NAME, object);
+						break;
+					}
+					case "email":{
+						Literal object = factory.createLiteral(value);
+						conn.remove(subject, FOAF.MBOX, null);
+						conn.add(subject, FOAF.MBOX, object);
+						
+						IRI schemaNS = factory.createIRI("http://schema.org/email");
 						conn.remove(subject, schemaNS, null);
 						conn.add(subject, schemaNS, object);
 						break;
 					}
-					case "accountablePerson":{
-						IRI object = factory.createIRI(json.getString("accountablePerson"));
-						IRI schemaNS = factory.createIRI("http://schema.org/accountablePerson");
+					case "roleName":{
+						IRI object = factory.createIRI(value);
+						IRI schemaNS = factory.createIRI("http://schema.org/roleName");
 						conn.remove(subject, schemaNS, null);
 						conn.add(subject, schemaNS, object);
 						break;
 					}
-					case "authors":{
-						IRI schemaNS = factory.createIRI("http://schema.org/author");
-						conn.remove(subject, schemaNS, null);
-						JsonArray authors = json.getJsonArray("authors");
-						for (int i = 0; i <= authors.size(); i++) {
-							IRI object = factory.createIRI(authors.getString(i));
-							conn.add(subject, schemaNS, object);
-						}
-						break;
-					}
-					case "creativeWorkStatus":{//TODO transformar Literal em IRI
-						Literal object = factory.createLiteral(json.getString(key));
-						IRI schemaNS = factory.createIRI("http://schema.org/creativeWorkStatus");
-						conn.remove(subject, schemaNS, null);
-						conn.add(subject, schemaNS, object);
-						break;
-					}
-					//TODO CriticReview
-					/*case "reviewer":{
-						schemaNS = factory.createIRI("http://schema.org/CriticReview");
-						IRI reviewer = factory.createIRI(userUri+object);
-						conn.add(subject, schemaNS, reviewer);
-					}*/
 				}
 			}
-
 		} finally {
 			repository.shutDown();
 		} 		
 	}
 
-	
-	public static void addReviewers(String id, JsonObject json) {		
-		try (RepositoryConnection conn = repository.getConnection()) {
-			ValueFactory factory = SimpleValueFactory.getInstance();
-			IRI subject = factory.createIRI(uriBase+id);
-			IRI schemaNS = factory.createIRI("http://schema.org/CriticReview");
-			JsonArray values = json.getJsonArray("reviewer");
-			for (int i = 0; i < values.size(); i++) {
-				IRI reviewer = factory.createIRI(values.getString(i));
-				conn.add(subject, schemaNS, reviewer);
-			}
-		} finally {
-			repository.shutDown();
-		} 		
-	}
-	
-	public static void removeReviewers(String id, JsonObject json) {		
-		try (RepositoryConnection conn = repository.getConnection()) {
-			ValueFactory factory = SimpleValueFactory.getInstance();
-			IRI subject = factory.createIRI(uriBase+id);
-			IRI schemaNS = factory.createIRI("http://schema.org/CriticReview");
-			JsonArray values = json.getJsonArray("reviewer");
-			for (int i = 0; i < values.size(); i++) {
-				IRI reviewer = factory.createIRI(values.getString(i));
-				conn.remove(subject, schemaNS, reviewer);
-			}
-		} finally {
-			repository.shutDown();
-		} 		
-	}
 }

@@ -1,4 +1,4 @@
-package com.example.sws;
+package model;
 
 import java.util.Iterator;
 import java.util.Map.Entry;

@@ -1,4 +1,4 @@
-package com.example.sws;
+package controller;
 
 import java.io.InputStream;
 
@@ -15,6 +15,10 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import model.ArticleDAO;
+import model.ConferenceDAO;
+import model.UserDAO;
 
 @Path("/")
 public class Resource {
@@ -219,9 +223,8 @@ public class Resource {
 	
 	@POST
 	@Path("articles/status")
-	//@Consumes("application/json")
 	public void createArticleStatus(){
-		ArticleDAO.initializeArticleStatus();
+		ArticleDAO.initializeArticlesStatus();
 	}
 	
 	@GET
@@ -229,5 +232,18 @@ public class Resource {
 	@Produces(MediaType.TEXT_PLAIN)
 	public String getArticleStatus(){
 		return ArticleDAO.getArticleStatus();
+	}
+	
+	@POST
+	@Path("users/roles")
+	public void createUsersRoles(){
+		UserDAO.initializeUsersNameRole();
+	}
+	
+	@GET
+	@Path("users/roles")
+	@Produces(MediaType.TEXT_PLAIN)
+	public String getUsersRoles(){
+		return UserDAO.getUsersRoles();
 	}
 }
