@@ -33,6 +33,10 @@ public class Resource {
 				result = UserDAO.getUsers();
 				break;
 			}
+			case "conferences":{
+				result = ConferenceDAO.getConferences();
+				break;
+			}
 			default:{
 				result = "null";
 			}
@@ -53,6 +57,10 @@ public class Resource {
 			}
 			case "users":{
 				result = UserDAO.getUserById(id);
+				break;
+			}
+			case "conferences":{
+				result = ConferenceDAO.getConferenceById(id);
 				break;
 			}
 			default:{
@@ -81,6 +89,10 @@ public class Resource {
 				}
 				case "users":{
 					result = UserDAO.createUser(jsonObject);
+					break;
+				}
+				case "conferences":{
+					result = ConferenceDAO.createConference(jsonObject);
 					break;
 				}
 				default:{
@@ -112,6 +124,10 @@ public class Resource {
 				}
 				case "users":{
 					exist = UserDAO.deleteUserGraph(id);
+					break;
+				}
+				case "conferences":{
+					exist = ConferenceDAO.deleteConferenceGraph(id);
 					break;
 				}
 				default:{
@@ -148,9 +164,10 @@ public class Resource {
 				UserDAO.updateUserGraph(id, dataObject);
 				break;
 			}
-			//default:{
-				//exist = false;
-			//}
+			case "conferences":{
+				ConferenceDAO.updateConferenceGraph(id, dataObject);
+				break;
+			}
 		}
 			return Response.status(200).build();
 		}	
@@ -199,4 +216,18 @@ public class Resource {
 		}
 	}
 */
+	
+	@POST
+	@Path("articles/status")
+	//@Consumes("application/json")
+	public void createArticleStatus(){
+		ArticleDAO.initializeArticleStatus();
+	}
+	
+	@GET
+	@Path("articles/status")
+	@Produces(MediaType.TEXT_PLAIN)
+	public String getArticleStatus(){
+		return ArticleDAO.getArticleStatus();
+	}
 }

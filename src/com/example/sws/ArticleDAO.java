@@ -1,10 +1,13 @@
 package com.example.sws;
 
+import java.io.StringReader;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
+import javax.json.Json;
 import javax.json.JsonArray;
 import javax.json.JsonObject;
+import javax.json.JsonReader;
 import javax.json.JsonValue;
 
 import org.eclipse.rdf4j.model.IRI;
@@ -17,6 +20,7 @@ import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.ModelBuilder;
 import org.eclipse.rdf4j.model.vocabulary.FOAF;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.query.GraphQueryResult;
 import org.eclipse.rdf4j.query.QueryResults;
 import org.eclipse.rdf4j.query.TupleQuery;
@@ -27,20 +31,73 @@ import org.eclipse.rdf4j.repository.http.HTTPRepository;
 
 public class ArticleDAO {
 
-	/*
-	submitted,
-	waitingReviewers,
-	inReview,
-	reviewed,
-	accepted,
-	acceptedWaitingLastVersion, 
-	withoutLastVersion, 
-	rejected,
-	withdrawn
-	*/
 	private static Repository repository = new HTTPRepository("http://localhost:7200/repositories/ArtifactAnalysis");
 	private static String uriBase = "https://localhost:8090/dataSWS/articles/";
 	
+	public static void initializeArticleStatus() {
+		String statusString = 
+	            "{\n" + 
+	            "	  	\"status\": [\n" + 
+	            "	  		{\"label\": \"submitted\", \"description\": \"The article was submitted to a conference\"},\n" + 
+	            "	  		{\"label\": \"waitingReviewers\", \"description\": \"The article is waiting reviewers\"},\n" + 
+	            "	  		{\"label\": \"inReview\", \"description\": \"The article is in evaluation mode\"},\n" + 
+	            "	  		{\"label\": \"reviewed\", \"description\": \"Review completed\"},\n" + 
+	            "	  		{\"label\": \"accepted\", \"description\": \"Article accepted\"},\n" + 
+	            "	  		{\"label\": \"acceptedWaitingLastVersion\", \"description\": \"Article accepted and waiting last version\"},\n" + 
+	            "	  		{\"label\": \"withoutLastVersion\", \"description\": \"Article without last version\"},\n" + 
+	            "	  		{\"label\": \"rejected\", \"description\": \"Article rejected\"},\n" + 
+	            "	  		{\"label\": \"withdrawn\", \"description\": \"Article withdrawn\"}\n" + 
+	            "	  	]\n" + 
+	            "	  }";
+		JsonReader reader = Json.createReader(new StringReader(statusString));
+        JsonObject dataObject = reader.readObject();
+        reader.close();
+        
+        Model model = new LinkedHashModel();
+		ModelBuilder builder = new ModelBuilder();
+		ValueFactory factory = SimpleValueFactory.getInstance();
+		
+        JsonArray status = dataObject.getJsonArray("status");
+        
+        try (RepositoryConnection conn = repository.getConnection()) {
+        	for (int i = 0; i < status.size(); i++) {
+        		builder.setNamespace("schema", "http://schema.org/").setNamespace(RDFS.NS).setNamespace(RDF.NS);
+        		builder.subject(uriBase + "status/" + status.getJsonObject(i).getString("label"))
+        			   .add(RDF.TYPE, "schema:Property")
+					   .add(RDFS.LABEL, factory.createIRI(uriBase + status.getJsonObject(i).getString("label")))
+					   .add("schema:description", status.getJsonObject(i).getString("description"));
+        		
+        		model = builder.defaultGraph().build();
+        		conn.add(model);
+        	}
+		} finally {
+			repository.shutDown();
+		}
+	}
+	
+	public static String getArticleStatus() {
+		StringBuilder resultString = new StringBuilder();
+		
+		try (RepositoryConnection conn = repository.getConnection()) {
+							
+			String queryString = "PREFIX schema: <http://schema.org/>\n"+
+	  						 "select * where {\n"+
+							 "?s a schema:Property .\n"+
+							 "}"; 
+			TupleQuery query = conn.prepareTupleQuery(queryString);
+			TupleQueryResult result = query.evaluate();
+					
+			while(result.hasNext()){
+				resultString.append(result.next().toString() + "\n");	 
+			}
+						
+		} finally {
+			repository.shutDown();
+		}
+		return resultString.toString();
+	}
+	
+
 	public static String getArticles() {
 		StringBuilder resultString = new StringBuilder();
 						
