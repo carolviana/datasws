@@ -27,7 +27,11 @@ import org.eclipse.rdf4j.repository.http.HTTPRepository;
 
 public class UserDAO {
 	private static Repository repository = new HTTPRepository("http://localhost:7200/repositories/ArtifactAnalysis");
-	private static String uriBase = "https://localhost:8090/dataSWS/user/";
+	private static String uriBase = "https://localhost:8090/dataSWS/users/";
+	
+	public static String getUsersUri() {
+		return uriBase;
+	}
 	
 	public static String getUsers() {
 		StringBuilder resultString = new StringBuilder();
@@ -51,7 +55,7 @@ public class UserDAO {
 		return resultString.toString();
 	}
 	
-	public static String getUser(int id) {
+	public static String getUserById(int id) {
 		StringBuilder resultString = new StringBuilder();
 				
 		try (RepositoryConnection conn = repository.getConnection()) {
@@ -81,7 +85,7 @@ public class UserDAO {
 			   .add(FOAF.NAME, user.getString("name"))
 			   .add("schema:email", user.getString("email"))
 			   .add(FOAF.MBOX, user.getString("email"))
-			   .add("schema:roleName", user.getString("type"));
+			   .add("schema:roleName", user.getString("roleName"));
 	
 		model = builder.defaultGraph().build();
 		
@@ -112,7 +116,6 @@ public class UserDAO {
 	}
 
 	public static void updateUserGraph(String id, JsonObject json) {
-		
 		
 		try (RepositoryConnection conn = repository.getConnection()) {
 			ValueFactory factory = SimpleValueFactory.getInstance();
@@ -146,7 +149,7 @@ public class UserDAO {
 						conn.add(subject, schemaNS, object);
 						break;
 					}
-					case "type":{
+					case "roleName":{
 						schemaNS = factory.createIRI("http://schema.org/roleName");
 						conn.remove(subject, schemaNS, null);
 						conn.add(subject, schemaNS, object);
@@ -154,7 +157,6 @@ public class UserDAO {
 					}
 				}
 			}
-
 		} finally {
 			repository.shutDown();
 		} 		

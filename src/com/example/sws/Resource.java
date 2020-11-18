@@ -16,48 +16,109 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-@Path("/publication")
-public class PublicationResource {
+@Path("/")
+public class Resource {
+	
 	@GET
+	@Path("{type}/")
 	@Produces(MediaType.TEXT_PLAIN)
-	public String getPublications(){		
-		return PublicationDAO.getPublications();
+	public String getAll(@PathParam("type") String type){		
+		String result;
+		switch (type) {
+			case "articles":{
+				result = ArticleDAO.getArticles();
+				break;
+			}
+			case "users":{
+				result = UserDAO.getUsers();
+				break;
+			}
+			default:{
+				result = "null";
+			}
+		}
+		return result;
 	}
 	
 	@GET
-	@Path("/{id}/")
+	@Path("{type}/{id}/")
 	//@Produces("application/rdf+xml")
 	@Produces(MediaType.TEXT_PLAIN)
-	public String getPublication(@PathParam("id") int id) {
-		return PublicationDAO.getPublicationById(id);
+	public String getSingle(@PathParam("type") String type, @PathParam("id") int id) {
+		String result = "teste";
+		switch (type) {
+			case "articles":{
+				result = ArticleDAO.getArticleById(id);
+				break;
+			}
+			case "users":{
+				result = UserDAO.getUserById(id);
+				break;
+			}
+			default:{
+				result = "caminho errado";
+			}
+		}
+		return result;
 	}
 	
+	
 	@POST
+	@Path("{type}/")
 	@Consumes("application/json")
-	public Response postPublication(InputStream publication){
+	public Response post(@PathParam("type") String type, InputStream data){
 		
-        JsonReader reader = Json.createReader(publication);
-        JsonObject publicationObject = reader.readObject();
+        JsonReader reader = Json.createReader(data);
+        JsonObject jsonObject = reader.readObject();
         reader.close();
                 
 		try {
-			String uriString = PublicationDAO.createPublication(publicationObject);			
-			if (!uriString.equals(null))
+			String result;
+			switch (type) {
+				case "articles":{
+					result = ArticleDAO.createArticle(jsonObject);
+					break;
+				}
+				case "users":{
+					result = UserDAO.createUser(jsonObject);
+					break;
+				}
+				default:{
+					result = "null";
+				}
+			}
+			
+			if (!result.equals(null))
 				return Response.status(201).build();
 			else
 				return Response.serverError().build();
+			
 		}catch (Exception e) {
 			e.printStackTrace();
 			return Response.status(304).build();
 		}
 	}
 	
+	
 	@DELETE
-	@Path("{id}/")	
-	public Response deletePublication(@PathParam("id")String id) {		
+	@Path("{type}/{id}/")	
+	public Response deletePublication(@PathParam("type") String type, @PathParam("id")String id) {		
 		boolean exist;
 		try {
-			exist = PublicationDAO.deletePublicationGraph(id);
+			switch (type) {
+				case "articles":{
+					exist = ArticleDAO.deleteArticleGraph(id);
+					break;
+				}
+				case "users":{
+					exist = UserDAO.deleteUserGraph(id);
+					break;
+				}
+				default:{
+					exist = false;
+				}
+			}
+			
 			if(exist)
 				return Response.status(200).build();
 			else
@@ -68,17 +129,29 @@ public class PublicationResource {
 		}			
 	}
 	
+	
 	@PUT
 	@Consumes("application/json")	
-	@Path("{id}/")
-	public Response putPublication(@PathParam("id") String id, InputStream data)  {
-		
+	@Path("{type}/{id}/")
+	public Response putPublication(@PathParam("type") String type, @PathParam("id") String id, InputStream data)  {
 		JsonReader reader = Json.createReader(data);
         JsonObject dataObject = reader.readObject();
         reader.close();
         
-		try {			
-			PublicationDAO.updatePublicationGraph(id , dataObject);
+		try {
+			switch (type) {
+			case "articles":{
+				ArticleDAO.updateArticleGraph(id, dataObject);
+				break;
+			}
+			case "users":{
+				UserDAO.updateUserGraph(id, dataObject);
+				break;
+			}
+			//default:{
+				//exist = false;
+			//}
+		}
 			return Response.status(200).build();
 		}	
 		catch (Exception e) {
@@ -86,7 +159,7 @@ public class PublicationResource {
 			return Response.status(304).build();
 		}		
 	}
-	
+	/*
 	//POST http://www.exemplo.com/articles/1234/allocateRevisers
 	@POST
 	@Path("{id}/allocateRevisers")
@@ -125,5 +198,5 @@ public class PublicationResource {
 			return Response.status(304).build();
 		}
 	}
-
+*/
 }
